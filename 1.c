@@ -6,9 +6,28 @@
 #include <fcntl.h>
 
 #define MAX_PATH_LENGTH 256
-#define MAX_OPTIONS_LENGTH 64
 
-// Function to print access rights
+
+void counter_l(char *filename) {
+    FILE *fp;
+    char c;
+    int lines = 0;
+    
+    fp = fopen(filename, "r");
+    if (fp == NULL) {
+        printf("Could not open file %s\n", filename);
+        exit(1);
+    }
+    
+    while ((c = getc(fp)) != EOF) {
+        if (c == '\n') {
+            lines++;
+        }
+    }
+    
+    printf("File %s has %d lines\n", filename, lines);
+    fclose(fp);
+}
 void printAccessRights(mode_t mode) {
     printf("User:\n");
     printf("Read - %s\n", (mode & S_IRUSR) ? "yes" : "no");
@@ -26,7 +45,7 @@ void printAccessRights(mode_t mode) {
 
 // Function to create symbolic link
 void createSymbolicLink(char *filepath) {
-    char linkname[MAX_PATH_LENGTH];
+    char linkname[256];
     printf("Please give the link name: ");
     scanf("%s", linkname);
     if (symlink(filepath, linkname) == -1) {
@@ -62,7 +81,7 @@ int main(int argc, char *argv[]) {
             printf("• a: access rights\n");
             printf("• 1: create symbolic link\n");
             printf("Please enter your options: ");
-            char options[MAX_OPTIONS_LENGTH];
+            char options[64];
             scanf("%s", options);
 
             printf("Name of file: %s\n", filepath);
@@ -77,5 +96,30 @@ int main(int argc, char *argv[]) {
             }
             if (strchr(options, 'm') != NULL) {
                 printf("Time of last modification: %s", ctime(&filestat.st_mtime));
-		 }
-           
+    		 }
+        }
+    }
+    pid_t pid;
+    if (pid == -1) {
+        printf("Failed fork\n");
+        return 1;
+    } else if (pid == 0) {
+        for (int i = 1; i <= atoi(argv[1]); i++) {
+            printf("Child with PID %d going to %d\n", getpid(), i);
+        }
+        return 0;
+    }
+    for (int i = 2; i < argc; i++) {
+        pid = fork();
+        if (pid == -1) {
+            printf("Failed fork\n");
+            return 1;
+        } else if (pid == 0) {
+            counter_l(argv[i]);
+            return 0;
+        }
+    }
+    for (int i = 0; i < argc - 2; i++) {
+        wait(NULL);
+    }
+}       
