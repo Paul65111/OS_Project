@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <time.h>
 #include <fcntl.h>
+#include <string.h>
+#include <sys/wait.h>
 
 #define MAX_PATH_LENGTH 256
 
@@ -45,7 +47,7 @@ void printAccessRights(mode_t mode) {
 
 // Function to create symbolic link
 void createSymbolicLink(char *filepath) {
-    char linkname[256];
+    char linkname[MAX_PATH_LENGTH];
     printf("Please give the link name: ");
     scanf("%s", linkname);
     if (symlink(filepath, linkname) == -1) {
@@ -96,10 +98,16 @@ int main(int argc, char *argv[]) {
             }
             if (strchr(options, 'm') != NULL) {
                 printf("Time of last modification: %s", ctime(&filestat.st_mtime));
-    		 }
+            }
+            if(strchr(options, 'a')!= NULL){
+                printAccessRights(filestat.st_uid);
+            }
+            if(strchr(options, 'l')!= NULL){
+                createSymbolicLink(filepath);
+            }
         }
     }
-    pid_t pid;
+    pid_t pid=fork();
     if (pid == -1) {
         printf("Failed fork\n");
         return 1;
@@ -116,10 +124,22 @@ int main(int argc, char *argv[]) {
             return 1;
         } else if (pid == 0) {
             counter_l(argv[i]);
+            char *arg=argv[i];
+            if(strstr(arg,".c")!=NULL){
+                char *aux = (char *)malloc(sizeof(char)*(strlen(arg)+6));
+                sprintf(aux,"gcc %s -o %s.out && ./%s.out",arg,arg,arg);
+                system(aux);
+                free(aux);
+            }else{
+                char *aux = (char *)malloc(sizeof(char)*(strlen(arg)+3));
+                sprintf(aux,"./%s",arg);
+                system(aux);
+                free(aux);
+            }
             return 0;
         }
     }
     for (int i = 0; i < argc - 2; i++) {
         wait(NULL);
     }
-}       
+}   
